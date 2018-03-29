@@ -5,7 +5,6 @@ import org.quartz.impl.StdSchedulerFactory;
 
 /**
  * 定时任务操作。
- *
  * @author maxl。
  */
 public class ScheduleManager {
@@ -15,12 +14,11 @@ public class ScheduleManager {
     private static String TRIGGER_GROUP_NAME = "DEFAULT_TRIGGERGROUP_NAME";//默认触发器名
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static void addJob(String jobName, String jobGroupName,
-                              String triggerName, String triggerGroupName, Class jobClass, String cronTime) {
+    public static void addJob(String triggerName, String triggerGroupName, Class jobClass, String cronTime) {
         try {
             Scheduler scheduler = schedulerFactory.getScheduler();
             // 任务名，任务组，任务执行类
-            JobDetail jobDetail = JobBuilder.newJob(jobClass).withIdentity(jobName, jobGroupName).build();
+            JobDetail jobDetail = JobBuilder.newJob(jobClass).withIdentity(JOB_GROUP_NAME, TRIGGER_GROUP_NAME).build();
             // 触发器
             TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
             // 触发器名,触发器组
@@ -71,6 +69,56 @@ public class ScheduleManager {
                 //removeJob(jobName, jobGroupName, triggerName, triggerGroupName);
                 //addJob(jobName, jobGroupName, triggerName, triggerGroupName, jobClass, cron);
                 /** 方式二 ：先删除，然后在创建一个新的Job */
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @param jobName
+     * @param jobGroupName
+     * @param triggerName
+     * @param triggerGroupName
+     * @Description: 移除一个任务
+     */
+    public static void removeJob(String jobName, String jobGroupName,
+                                 String triggerName, String triggerGroupName) {
+        try {
+            Scheduler scheduler = schedulerFactory.getScheduler();
+            TriggerKey triggerKey = TriggerKey.triggerKey(triggerName, triggerGroupName);
+
+            // 停止触发器
+            scheduler.pauseTrigger(triggerKey);
+            // 移除触发器
+            scheduler.unscheduleJob(triggerKey);
+            // 删除任务
+            scheduler.deleteJob(JobKey.jobKey(jobName, jobGroupName));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @Description:启动所有定时任务
+     */
+    public static void startJobs() {
+        try {
+            Scheduler scheduler = schedulerFactory.getScheduler();
+            scheduler.start();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @Description:关闭所有定时任务
+     */
+    public static void shutDownJobs() {
+        try {
+            Scheduler scheduler = schedulerFactory.getScheduler();
+            if (!scheduler.isShutdown()) {
+                scheduler.shutdown();
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
