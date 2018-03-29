@@ -5,6 +5,7 @@ import org.quartz.impl.StdSchedulerFactory;
 
 /**
  * 定时任务操作。
+ *
  * @author maxl。
  */
 public class ScheduleManager {
@@ -34,6 +35,42 @@ public class ScheduleManager {
             // 启动
             if (!scheduler.isShutdown()) {
                 scheduler.start();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void modifyJobTime(String jobName, String jobGroupName,
+                                     String triggerName, String triggerGroupName, String cronTime) {
+        try {
+            Scheduler sched = schedulerFactory.getScheduler();
+            TriggerKey triggerKey = TriggerKey.triggerKey(triggerName, triggerGroupName);
+            CronTrigger trigger = (CronTrigger) sched.getTrigger(triggerKey);
+            if (trigger == null) {
+                return;
+            }
+
+            String oldScheduleTime = trigger.getCronExpression();
+            if (!oldScheduleTime.equalsIgnoreCase(cronTime)) {
+                // 触发器
+                TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
+                // 触发器名,触发器组
+                triggerBuilder.withIdentity(triggerName, triggerGroupName);
+                triggerBuilder.startNow();
+                // 触发器时间设定
+                triggerBuilder.withSchedule(CronScheduleBuilder.cronSchedule(cronTime));
+                // 创建Trigger对象
+                trigger = (CronTrigger) triggerBuilder.build();
+                // 方式一 ：修改一个任务的触发时间
+                sched.rescheduleJob(triggerKey, trigger);
+
+                /** 方式二：先删除，然后在创建一个新的Job  */
+                //JobDetail jobDetail = sched.getJobDetail(JobKey.jobKey(jobName, jobGroupName));
+                //Class<? extends Job> jobClass = jobDetail.getJobClass();
+                //removeJob(jobName, jobGroupName, triggerName, triggerGroupName);
+                //addJob(jobName, jobGroupName, triggerName, triggerGroupName, jobClass, cron);
+                /** 方式二 ：先删除，然后在创建一个新的Job */
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
